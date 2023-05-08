@@ -66,14 +66,14 @@ public actor WatchConnection: ObservableObject {
     }
     
     /// The most recent contextual data sent to the paired and active device.
-    public var applicationContext: [String: NSObject] {
+    public var applicationContext: PropertyList {
         get throws {
             try session.applicationContext as! [String: NSObject]
         }
     }
     
     /// A dictionary containing the last update data received from a paired and active device.
-    public var receivedApplicationContext: [String: NSObject] {
+    public var receivedApplicationContext: PropertyList {
         get throws {
             try session.receivedApplicationContext as! [String: NSObject]
         }
@@ -114,7 +114,7 @@ public actor WatchConnection: ObservableObject {
     }
     
     /// Sends a message immediately to the paired and active device.
-    func send(_ dictionary: [String: NSObject]) throws {
+    func send(_ dictionary: PropertyList) throws {
         let session = try validateActive()
         session.sendMessage(dictionary, replyHandler: nil, errorHandler: nil)
     }
@@ -248,10 +248,12 @@ extension WatchConnection.Delegate: WCSessionDelegate {
 
 public extension WatchConnection {
     
+    typealias PropertyList = [String: NSObject]
+    
     enum Message: Equatable, Hashable {
         
         case data(Data)
-        case propertyList([String: NSObject])
+        case propertyList(PropertyList)
     }
 }
 
