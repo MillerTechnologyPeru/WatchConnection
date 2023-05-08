@@ -5,11 +5,14 @@
 //  Created by Alsey Coleman Miller on 5/7/23.
 //
 
+#if canImport(WatchConnectivity)
 import Foundation
 import Combine
 import WatchConnectivity
 
 /// Apple Watch Connection
+@available(macOS, unavailable)
+@available(tvOS, unavailable)
 public actor WatchConnection: ObservableObject {
     
     // MARK: - Properties
@@ -62,6 +65,14 @@ public actor WatchConnection: ObservableObject {
     public var isComplicationEnabled: Bool {
         get throws {
             try session.isComplicationEnabled
+        }
+    }
+    
+    /// Boolean value indicating whether the paired iPhone must be in an unlocked state to be reachable.
+    @available(iOS, unavailable)
+    public var deviceNeedsUnlockAfterRebootForReachability: Bool {
+        get throws {
+            try session.iOSDeviceNeedsUnlockAfterRebootForReachability
         }
     }
     
@@ -280,3 +291,5 @@ internal extension WatchConnection {
         var activate: CheckedContinuation<WCSessionActivationState, Error>?
     }
 }
+
+#endif
