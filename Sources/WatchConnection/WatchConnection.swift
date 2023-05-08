@@ -37,7 +37,45 @@ public actor WatchConnection: ObservableObject {
     /// A Boolean value indicating whether the counterpart app is available for live messaging.
     public var isReachable: Bool {
         get throws {
-            return try session.isReachable
+            try session.isReachable
+        }
+    }
+    
+    /// A Boolean value that indicates whether the session has more content to deliver.
+    @available(watchOS, unavailable)
+    public var isPaired: Bool {
+        get throws {
+            try session.isPaired
+        }
+    }
+    
+    /// A Boolean value indicating whether the currently paired and active Apple Watch has installed the app.
+    @available(watchOS, unavailable)
+    public var isWatchAppInstalled: Bool {
+        get throws {
+            try session.isWatchAppInstalled
+        }
+    }
+    
+    /// A Boolean value indicating whether the Watch app’s complication is in use on the currently paired and active Apple Watch.
+    @available(watchOS, unavailable)
+    public var isComplicationEnabled: Bool {
+        get throws {
+            try session.isComplicationEnabled
+        }
+    }
+    
+    /// The most recent contextual data sent to the paired and active device.
+    public var applicationContext: [String: NSObject] {
+        get throws {
+            try session.applicationContext as! [String: NSObject]
+        }
+    }
+    
+    /// A dictionary containing the last update data received from a paired and active device.
+    public var receivedApplicationContext: [String: NSObject] {
+        get throws {
+            try session.receivedApplicationContext as! [String: NSObject]
         }
     }
     
@@ -60,9 +98,25 @@ public actor WatchConnection: ObservableObject {
         }
     }
     
-    func send(_ data: Data) async throws {
+    func send(_ message: Message) throws {
+        switch message {
+        case let .data(data):
+            try send(data)
+        case let .propertyList(dictionary):
+            try send(dictionary)
+        }
+    }
+    
+    /// Sends a message immediately to the paired and active device.
+    func send(_ data: Data) throws {
         let session = try validateActive()
         session.sendMessageData(data, replyHandler: nil, errorHandler: nil)
+    }
+    
+    /// Sends a message immediately to the paired and active device.
+    func send(_ dictionary: [String: NSObject]) throws {
+        let session = try validateActive()
+        session.sendMessage(dictionary, replyHandler: nil, errorHandler: nil)
     }
 }
 
@@ -106,7 +160,7 @@ internal extension WatchConnection {
 extension WatchConnection.Delegate: WCSessionDelegate {
     
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        notiyStateChanged()
+        willChange()
         let result: Result<WCSessionActivationState, Error>
         if let error = error {
             result = .failure(error)
@@ -119,27 +173,87 @@ extension WatchConnection.Delegate: WCSessionDelegate {
     }
     
     func sessionReachabilityDidChange(_ session: WCSession) {
-        notiyStateChanged()
+        willChange()
     }
     
     #if os(iOS)
     func sessionDidBecomeInactive(_ session: WCSession) {
-        notiyStateChanged()
+        willChange()
     }
     
     func sessionDidDeactivate(_ session: WCSession) {
-        notiyStateChanged()
+        willChange()
     }
     
     func sessionWatchStateDidChange(_ session: WCSession) {
-        notiyStateChanged()
+        willChange()
     }
     #endif
     
     
+    /** Called on the delegate of the receiver. Will be called on startup if the incoming message caused the receiver to launch. */
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        willChange()
+    }
+
+    
+    /** Called on the delegate of the receiver when the sender sends a message that expects a reply. Will be called on startup if the incoming message caused the receiver to launch. */
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
+        willChange()
+    }
+
+    
+    /** Called on the delegate of the receiver. Will be called on startup if the incoming message data caused the receiver to launch. */
+    func session(_ session: WCSession, didReceiveMessageData messageData: Data) {
+        willChange()
+    }
+
+    
+    /** Called on the delegate of the receiver when the sender sends message data that expects a reply. Will be called on startup if the incoming message data caused the receiver to launch. */
+    func session(_ session: WCSession, didReceiveMessageData messageData: Data, replyHandler: @escaping (Data) -> Void) {
+        willChange()
+    }
+    
+    /** -------------------------- Background Transfers ------------------------- */
+    
+    /** Called on the delegate of the receiver. Will be called on startup if an applicationContext is available. */
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
+        willChange()
+    }
+    
+    /** Called on the sending side after the user info transfer has successfully completed or failed with an error. Will be called on next launch if the sender was not running when the user info finished. */
+    func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer, error: Error?) {
+        willChange()
+    }
+
+    
+    /** Called on the delegate of the receiver. Will be called on startup if the user info finished transferring when the receiver was not running. */
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any]) {
+        willChange()
+    }
+
+    
+    /** Called on the sending side after the file transfer has successfully completed or failed with an error. Will be called on next launch if the sender was not running when the transfer finished. */
+    func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
+        willChange()
+    }
+    
+    /** Called on the delegate of the receiver. Will be called on startup if the file finished transferring when the receiver was not running. The incoming file will be located in the Documents/Inbox/ folder when being delivered. The receiver must take ownership of the file by moving it to another location. The system will remove any content that has not been moved when this delegate method returns. */
+    func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        willChange()
+    }
 }
 
 // MARK: - Supporting Types
+
+public extension WatchConnection {
+    
+    enum Message: Equatable, Hashable {
+        
+        case data(Data)
+        case propertyList([String: NSObject])
+    }
+}
 
 internal extension WatchConnection {
     
@@ -151,7 +265,7 @@ internal extension WatchConnection {
             self.connection = connection
         }
         
-        func notiyStateChanged() {
+        func willChange() {
             connection.objectWillChange.send()
         }
     }
@@ -164,12 +278,3 @@ internal extension WatchConnection {
         var activate: CheckedContinuation<WCSessionActivationState, Error>?
     }
 }
-
-internal extension WatchConnection {
-    
-    struct PendingOperation <Success, Failure> where Failure: Error {
-        
-        let continuation: CheckedContinuation<Success, Failure>
-    }
-}
-
