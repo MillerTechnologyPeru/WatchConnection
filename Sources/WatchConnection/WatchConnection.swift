@@ -95,6 +95,7 @@ public actor WatchConnection: ObservableObject {
     /// Defailt
     private init() { }
     
+    /// The singleton session object for the current device.
     public static let shared = WatchConnection()
     
     // MARK: - Methods
@@ -109,6 +110,7 @@ public actor WatchConnection: ObservableObject {
         }
     }
     
+    /// Sends a message immediately to the paired and active device.
     func send(_ message: Message) throws {
         switch message {
         case let .data(data):
