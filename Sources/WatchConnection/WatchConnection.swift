@@ -110,6 +110,12 @@ public actor WatchConnection: ObservableObject {
         }
     }
     
+    /// Sends a dictionary of values that a paired and active device can use to synchronize its state.
+    func updateApplicationContext(_ applicationContext: PropertyList) async throws {
+        let session = try validateActive()
+        try session.updateApplicationContext(applicationContext)
+    }
+    
     /// Sends a message immediately to the paired and active device.
     func send(_ message: Message) throws {
         switch message {
