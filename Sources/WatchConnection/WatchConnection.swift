@@ -72,7 +72,7 @@ internal extension WatchConnection {
         get throws {
             // validate if supported (false on iPad)
             guard isSupported else {
-                throw WatchConnectionError.notSupported
+                throw WCError(.sessionNotSupported)
             }
             let session = WCSession.default
             // create and set delegate
@@ -90,7 +90,7 @@ internal extension WatchConnection {
     func validateActive() throws -> WCSession {
         let session = try self.session
         guard session.activationState == .activated else {
-            throw WatchConnectionError.notActive
+            throw WCError(.sessionNotActivated)
         }
         return session
     }
