@@ -41,7 +41,7 @@ public actor WatchConnection: ObservableObject {
     /// Before retrieving the default session object, call this method to verify that the current device supports watch connectivity.
     /// Session objects are always available on Apple Watch. They are also available on iPhones that support pairing with an Apple Watch.
     /// For all other devices, this method returns false to indicate that you cannot use the classes and methods of this framework.
-    public var isSupported: Bool {
+    public nonisolated var isSupported: Bool {
         WCSession.isSupported()
     }
     
