@@ -17,9 +17,13 @@ public actor WatchConnection: ObservableObject {
     
     // MARK: - Properties
     
-    private var delegate: Delegate?
+    internal var delegate: Delegate?
     
     private var internalState = State()
+    
+    internal var recievedMessages = [PropertyList]()
+    
+    internal var recievedData = [Data]()
     
     /// Returns a Boolean value indicating whether the current iOS device is able to use a session object.
     ///
@@ -173,15 +177,15 @@ public actor WatchConnection: ObservableObject {
     /// Sends a message immediately to the paired and active device.
     public func send(_ data: Data) throws {
         let session = try validateActive()
-        defer { objectWillChange.send() }
         session.sendMessageData(data, replyHandler: nil, errorHandler: nil)
+        objectWillChange.send()
     }
     
     /// Sends a message immediately to the paired and active device.
     public func send(_ dictionary: PropertyList) throws {
         let session = try validateActive()
-        defer { objectWillChange.send() }
         session.sendMessage(dictionary, replyHandler: nil, errorHandler: nil)
+        objectWillChange.send()
     }
     
     /// Sends a message immediately to the paired and active device and waits for a response.
@@ -220,6 +224,22 @@ public actor WatchConnection: ObservableObject {
                 continuation.resume(throwing: error)
             })
         }
+    }
+    
+    /// Wait for pending incoming data.
+    public func receiveData() async throws -> Data {
+        while recievedData.isEmpty {
+            try await Task.sleep(timeInterval: 0.2)
+        }
+        return recievedData.removeFirst()
+    }
+    
+    /// Wait for pending incoming messages.
+    public func recieveMessage() async throws -> PropertyList {
+        while recievedMessages.isEmpty {
+            try await Task.sleep(timeInterval: 0.2)
+        }
+        return recievedMessages.removeFirst()
     }
 }
 
