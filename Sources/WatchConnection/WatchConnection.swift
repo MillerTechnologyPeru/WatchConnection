@@ -8,7 +8,7 @@
 #if canImport(WatchConnectivity)
 import Foundation
 import Combine
-import WatchConnectivity
+@_exported import WatchConnectivity
 
 /// Apple Watch Connection
 @available(macOS, unavailable)
