@@ -431,12 +431,6 @@ extension WatchConnection.Delegate: WCSessionDelegate {
 public extension WatchConnection {
     
     typealias PropertyList = [String: NSObject]
-    
-    enum Message: Equatable, Hashable {
-        
-        case data(Data)
-        case propertyList(PropertyList)
-    }
 }
 
 internal extension WatchConnection {
