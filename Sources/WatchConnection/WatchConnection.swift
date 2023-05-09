@@ -141,8 +141,14 @@ public actor WatchConnection: ObservableObject {
     @discardableResult
     public func activate() async throws -> WCSessionActivationState {
         let session = try self.session
+        while self.internalState.continuation.activate != nil {
+            try await Task.sleep(timeInterval: sleepTimeInterval)
+        }
+        guard session.activationState != .activated else {
+            return session.activationState
+        }
         return try await withCheckedThrowingContinuation { continuation in
-            self.internalState.activate = continuation
+            self.internalState.continuation.activate = continuation
             session.activate()
         }
     }
