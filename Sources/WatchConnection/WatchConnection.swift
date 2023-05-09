@@ -22,18 +22,6 @@ public actor WatchConnection: ObservableObject {
     @Published
     private var internalState = State()
     
-    @Published
-    internal var recievedMessages = [PropertyList]()
-    
-    @Published
-    internal var recievedData = [Data]()
-    
-    @Published
-    internal var recievedUserInfo = [PropertyList]()
-    
-    @Published
-    internal var recievedFiles = [WCSessionFile]()
-    
     let sleepTimeInterval: TimeInterval = 0.2
     
     /// Returns a Boolean value indicating whether the current iOS device is able to use a session object.
@@ -182,17 +170,17 @@ public actor WatchConnection: ObservableObject {
         defer { objectWillChange.send() }
         return try await withCheckedThrowingContinuation { continuation in
             let transfer = session.transferUserInfo(userInfo)
-            self.internalState.transferUserInfo.updateValue(continuation, forKey: transfer)
+            self.internalState.continuation.transferUserInfo.updateValue(continuation, forKey: transfer)
             objectWillChange.send()
         }
     }
     
     /// Wait for pending incoming messages.
     public func recieveUserInfo() async throws -> PropertyList {
-        while recievedUserInfo.isEmpty {
+        while internalState.recievedUserInfo.isEmpty {
             try await Task.sleep(timeInterval: sleepTimeInterval)
         }
-        return recievedUserInfo.removeFirst()
+        return internalState.recievedUserInfo.removeFirst()
     }
     
     /// Sends the specified data dictionary to the counterpart.
@@ -201,17 +189,17 @@ public actor WatchConnection: ObservableObject {
         defer { objectWillChange.send() }
         return try await withCheckedThrowingContinuation { continuation in
             let transfer = session.transferFile(file, metadata: metadata)
-            self.internalState.transferFile.updateValue(continuation, forKey: transfer)
+            self.internalState.continuation.transferFile.updateValue(continuation, forKey: transfer)
             objectWillChange.send()
         }
     }
     
     /// Wait for pending incoming files.
     public func recieveFiles() async throws -> WCSessionFile {
-        while recievedFiles.isEmpty {
+        while internalState.recievedFiles.isEmpty {
             try await Task.sleep(timeInterval: sleepTimeInterval)
         }
-        return recievedFiles.removeFirst()
+        return internalState.recievedFiles.removeFirst()
     }
     
     /// Sends a message immediately to the paired and active device.
@@ -223,10 +211,10 @@ public actor WatchConnection: ObservableObject {
     
     /// Wait for pending incoming data.
     public func receiveData() async throws -> Data {
-        while recievedData.isEmpty {
+        while internalState.recievedData.isEmpty {
             try await Task.sleep(timeInterval: sleepTimeInterval)
         }
-        return recievedData.removeFirst()
+        return internalState.recievedData.removeFirst()
     }
     
     /// Sends a message immediately to the paired and active device.
@@ -238,10 +226,10 @@ public actor WatchConnection: ObservableObject {
     
     /// Wait for pending incoming messages.
     public func recieveMessage() async throws -> PropertyList {
-        while recievedMessages.isEmpty {
+        while internalState.recievedMessages.isEmpty {
             try await Task.sleep(timeInterval: sleepTimeInterval)
         }
-        return recievedMessages.removeFirst()
+        return internalState.recievedMessages.removeFirst()
     }
     
     /// Sends a data object immediately to the paired and active device and waits for a response.
@@ -301,34 +289,34 @@ internal extension WatchConnection {
     }
     
     func activationDidComplete(with result: Result<WCSessionActivationState, Error>) {
-        self.internalState.activate?.resume(with: result)
-        self.internalState.activate = nil
+        self.internalState.continuation.activate?.resume(with: result)
+        self.internalState.continuation.activate = nil
     }
     
     func didTransfer(_ transfer: WCSessionUserInfoTransfer, with result: Result<Void, Error>) {
-        self.internalState.transferUserInfo[transfer]?.resume(with: result)
-        self.internalState.transferUserInfo[transfer] = nil
+        self.internalState.continuation.transferUserInfo[transfer]?.resume(with: result)
+        self.internalState.continuation.transferUserInfo[transfer] = nil
     }
     
     func didTransfer(_ transfer: WCSessionFileTransfer, with result: Result<Void, Error>) {
-        self.internalState.transferFile[transfer]?.resume(with: result)
-        self.internalState.transferFile[transfer] = nil
+        self.internalState.continuation.transferFile[transfer]?.resume(with: result)
+        self.internalState.continuation.transferFile[transfer] = nil
     }
     
     func didRecieve(userInfo: PropertyList) {
-        self.recievedUserInfo.append(userInfo)
+        self.internalState.recievedUserInfo.append(userInfo)
     }
     
     func didRecieve(file: WCSessionFile) {
-        self.recievedFiles.append(file)
+        self.internalState.recievedFiles.append(file)
     }
     
     func didRecieve(data: Data) {
-        self.recievedData.append(data)
+        self.internalState.recievedData.append(data)
     }
     
     func didRecieve(message: PropertyList) {
-        self.recievedMessages.append(message)
+        self.internalState.recievedMessages.append(message)
     }
 }
 
@@ -475,6 +463,19 @@ internal extension WatchConnection {
 internal extension WatchConnection {
     
     struct State {
+        
+        var continuation = Continuation()
+        
+        var recievedMessages = [PropertyList]()
+        
+        var recievedData = [Data]()
+        
+        var recievedUserInfo = [PropertyList]()
+        
+        var recievedFiles = [WCSessionFile]()
+    }
+    
+    struct Continuation {
         
         var activate: CheckedContinuation<WCSessionActivationState, Error>?
         
