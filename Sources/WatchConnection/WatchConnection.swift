@@ -102,7 +102,7 @@ public actor WatchConnection: ObservableObject {
     
     /// Activates the session asynchronously.
     @discardableResult
-    func activate() async throws -> WCSessionActivationState {
+    public func activate() async throws -> WCSessionActivationState {
         let session = try self.session
         return try await withCheckedThrowingContinuation { continuation in
             self.internalState.activate = continuation
@@ -111,13 +111,14 @@ public actor WatchConnection: ObservableObject {
     }
     
     /// Sends a dictionary of values that a paired and active device can use to synchronize its state.
-    func updateApplicationContext(_ applicationContext: PropertyList) async throws {
+    public func updateApplicationContext(_ applicationContext: PropertyList) throws {
         let session = try validateActive()
         try session.updateApplicationContext(applicationContext)
     }
     
+    
     /// Sends a message immediately to the paired and active device.
-    func send(_ message: Message) throws {
+    public func send(_ message: Message) throws {
         switch message {
         case let .data(data):
             try send(data)
@@ -127,15 +128,48 @@ public actor WatchConnection: ObservableObject {
     }
     
     /// Sends a message immediately to the paired and active device.
-    func send(_ data: Data) throws {
+    public func send(_ data: Data) throws {
         let session = try validateActive()
         session.sendMessageData(data, replyHandler: nil, errorHandler: nil)
     }
     
     /// Sends a message immediately to the paired and active device.
-    func send(_ dictionary: PropertyList) throws {
+    public func send(_ dictionary: PropertyList) throws {
         let session = try validateActive()
         session.sendMessage(dictionary, replyHandler: nil, errorHandler: nil)
+    }
+    
+    public func sendWithResponse(_ message: Message) async throws -> Message {
+        switch message {
+        case let .data(data):
+            let reply = try await sendWithResponse(data)
+            return .data(reply)
+        case let .propertyList(propertyList):
+            let reply = try await sendWithResponse(propertyList)
+            return .propertyList(reply)
+        }
+    }
+    
+    public func sendWithResponse(_ data: Data) async throws -> Data {
+        let session = try validateActive()
+        return try await withCheckedThrowingContinuation { continuation in
+            session.sendMessageData(data, replyHandler: { reply in
+                continuation.resume(returning: reply)
+            }, errorHandler: { error in
+                continuation.resume(throwing: error)
+            })
+        }
+    }
+    
+    public func sendWithResponse(_ dictionary: PropertyList) async throws -> PropertyList {
+        let session = try validateActive()
+        return try await withCheckedThrowingContinuation { continuation in
+            session.sendMessage(dictionary, replyHandler: { reply in
+                continuation.resume(returning: reply as! [String: NSObject])
+            }, errorHandler: { error in
+                continuation.resume(throwing: error)
+            })
+        }
     }
 }
 
@@ -208,7 +242,6 @@ extension WatchConnection.Delegate: WCSessionDelegate {
         willChange()
     }
     #endif
-    
     
     /** Called on the delegate of the receiver. Will be called on startup if the incoming message caused the receiver to launch. */
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
