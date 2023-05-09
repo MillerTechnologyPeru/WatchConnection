@@ -153,6 +153,16 @@ public actor WatchConnection: ObservableObject {
         objectWillChange.send()
     }
     
+    /// Sends complication-related data from the iOS app to the WatchKit extension.
+    ///
+    /// Call this method when you have new data to send to your complication.
+    /// Your WatchKit extension can use the data to replace or extend its current timeline entries.
+    @available(watchOS, unavailable)
+    public func transferCurrentComplicationUserInfo(_ userInfo: PropertyList) throws {
+        let session = try validateActive()
+        session.transferCurrentComplicationUserInfo(userInfo)
+    }
+    
     /// Sends the specified data dictionary to the counterpart.
     public func transfer(userInfo: PropertyList) async throws {
         let session = try validateActive()
