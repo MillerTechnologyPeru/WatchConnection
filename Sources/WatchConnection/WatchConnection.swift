@@ -164,6 +164,14 @@ public actor WatchConnection: ObservableObject {
         }
     }
     
+    /// Wait for pending incoming messages.
+    public func recieveUserInfo() async throws -> PropertyList {
+        while recievedUserInfo.isEmpty {
+            try await Task.sleep(timeInterval: sleepTimeInterval)
+        }
+        return recievedUserInfo.removeFirst()
+    }
+    
     /// Sends the specified data dictionary to the counterpart.
     public func transfer(file: URL, metadata: [String: Any]? = nil) async throws {
         let session = try validateActive()
@@ -175,14 +183,12 @@ public actor WatchConnection: ObservableObject {
         }
     }
     
-    /// Sends a message immediately to the paired and active device.
-    public func send(_ message: Message) throws {
-        switch message {
-        case let .data(data):
-            try send(data)
-        case let .propertyList(dictionary):
-            try send(dictionary)
+    /// Wait for pending incoming files.
+    public func recieveFiles() async throws -> WCSessionFile {
+        while recievedFiles.isEmpty {
+            try await Task.sleep(timeInterval: sleepTimeInterval)
         }
+        return recievedFiles.removeFirst()
     }
     
     /// Sends a message immediately to the paired and active device.
@@ -192,6 +198,14 @@ public actor WatchConnection: ObservableObject {
         objectWillChange.send()
     }
     
+    /// Wait for pending incoming data.
+    public func receiveData() async throws -> Data {
+        while recievedData.isEmpty {
+            try await Task.sleep(timeInterval: sleepTimeInterval)
+        }
+        return recievedData.removeFirst()
+    }
+    
     /// Sends a message immediately to the paired and active device.
     public func send(_ dictionary: PropertyList) throws {
         let session = try validateActive()
@@ -199,16 +213,12 @@ public actor WatchConnection: ObservableObject {
         objectWillChange.send()
     }
     
-    /// Sends a message immediately to the paired and active device and waits for a response.
-    public nonisolated func sendWithResponse(_ message: Message) async throws -> Message {
-        switch message {
-        case let .data(data):
-            let reply = try await sendWithResponse(data)
-            return .data(reply)
-        case let .propertyList(propertyList):
-            let reply = try await sendWithResponse(propertyList)
-            return .propertyList(reply)
+    /// Wait for pending incoming messages.
+    public func recieveMessage() async throws -> PropertyList {
+        while recievedMessages.isEmpty {
+            try await Task.sleep(timeInterval: sleepTimeInterval)
         }
+        return recievedMessages.removeFirst()
     }
     
     /// Sends a data object immediately to the paired and active device and waits for a response.
@@ -235,38 +245,6 @@ public actor WatchConnection: ObservableObject {
                 continuation.resume(throwing: error)
             })
         }
-    }
-    
-    /// Wait for pending incoming data.
-    public func receiveData() async throws -> Data {
-        while recievedData.isEmpty {
-            try await Task.sleep(timeInterval: sleepTimeInterval)
-        }
-        return recievedData.removeFirst()
-    }
-    
-    /// Wait for pending incoming messages.
-    public func recieveMessage() async throws -> PropertyList {
-        while recievedMessages.isEmpty {
-            try await Task.sleep(timeInterval: sleepTimeInterval)
-        }
-        return recievedMessages.removeFirst()
-    }
-    
-    /// Wait for pending incoming messages.
-    public func recievedUserInfo() async throws -> PropertyList {
-        while recievedUserInfo.isEmpty {
-            try await Task.sleep(timeInterval: sleepTimeInterval)
-        }
-        return recievedUserInfo.removeFirst()
-    }
-    
-    /// Wait for pending incoming files.
-    public func recieveFiles() async throws -> WCSessionFile {
-        while recievedFiles.isEmpty {
-            try await Task.sleep(timeInterval: sleepTimeInterval)
-        }
-        return recievedFiles.removeFirst()
     }
 }
 
